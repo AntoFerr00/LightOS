@@ -34,9 +34,12 @@ load_kernel:
     call print_string
 
     mov bx, KERNEL_OFFSET ; Read from disk into memory at 0x1000
-    mov dh, 15            ; Read 15 sectors
+    mov dh, 2             ; FIXED: Read 2 sectors instead of 15
     mov dl, [BOOT_DRIVE]
     call disk_load
+    
+    mov bx, MSG_KERNEL_LOADED ; ADDED: Success message
+    call print_string
     ret
 
 [bits 32]
@@ -49,9 +52,10 @@ BEGIN_PM:
     jmp $ ; Hang here
 
 BOOT_DRIVE db 0
-MSG_REAL_MODE db "Started in 16-bit Real Mode", 0
-MSG_PROT_MODE db "Landed in 32-bit Protected Mode", 0
-MSG_LOAD_KERNEL db "Loading kernel into memory...", 0
+MSG_REAL_MODE db "Started in 16-bit Real Mode", 0x0D, 0x0A, 0
+MSG_PROT_MODE db "Landed in 32-bit Protected Mode", 0x0D, 0x0A, 0
+MSG_LOAD_KERNEL db "Loading kernel into memory...", 0x0D, 0x0A, 0
+MSG_KERNEL_LOADED db "Kernel loaded successfully.", 0x0D, 0x0A, 0
 
 ; Padding and magic number
 times 510-($-$$) db 0
