@@ -1,40 +1,71 @@
-# Makefile for LightOS (Linux/WSL Version)
+# Makefile for the barebones LightOS
 
-# Target for C files
+# Source files
+ASM_SOURCES = boot.asm
 C_SOURCES = kernel.c
-C_OBJECTS = $(C_SOURCES:.c=.o)
+OBJECTS = boot.o kernel.o
 
 # Tools
 AS = nasm
 CC = gcc
 LD = ld
 
-# Flags for the C compiler
-# We use -m32 to create a 32-bit binary
-# -ffreestanding means we are not linking against a standard library
-CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra
+# Compiler flags - Added more conservative flags
+CFLAGS = -m32 -ffreestanding -O0 -Wall -Wextra -nostdlib -fno-builtin -fno-pic -fno-stack-protector -fno-asynchronous-unwind-tables
 
-# Build process
-all: lightos.bin
+# Assembler flags
+ASFLAGS = -f elf32
 
-lightos.bin: boot.bin kernel.bin
-	cat boot.bin kernel.bin > lightos.bin
+# Linker flags - Simplified and more explicit
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
 
-boot.bin: boot.asm boot_print.asm disk_load.asm gdt.asm 32bit_print.asm switch_pm.asm
-	$(AS) boot.asm -f bin -o boot.bin
+# Build a bootable ISO
+all: lightos.iso
 
-kernel.bin: kernel.o linker.ld
-	$(LD) -m elf_i386 -o kernel.elf -Tlinker.ld $(C_OBJECTS)
-	objcopy -O binary kernel.elf kernel.bin
+lightos.iso: kernel.bin grub.cfg
+	mkdir -p isodir/boot/grub
+	cp kernel.bin isodir/boot/
+	cp grub.cfg isodir/boot/grub/
+	grub-mkrescue -o lightos.iso isodir
+	rm -r isodir
 
-# Compile C code
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+kernel.bin: $(OBJECTS) linker.ld
+	@echo "Linking kernel..."
+	$(LD) $(LDFLAGS) -o kernel.bin $(OBJECTS)
+	@echo "Kernel linked successfully"
 
-# Run in QEMU without a GUI window
-run: lightos.bin
-	qemu-system-i386 -fda lightos.bin -nographic
+kernel.o: kernel.c
+	@echo "Compiling kernel.c..."
+	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 
-# Clean up build files
+boot.o: boot.asm
+	@echo "Assembling boot.asm..."
+	$(AS) $(ASFLAGS) boot.asm -o boot.o
+
+# Alternative run targets for debugging
+run: lightos.iso
+	qemu-system-i386 -cdrom lightos.iso -nographic -m 256M -machine pc-i440fx-2.8 -cpu pentium -no-acpi -no-hpet
+
+run-gui: lightos.iso
+	qemu-system-i386 -cdrom lightos.iso -m 256M -machine pc-i440fx-2.8 -cpu pentium -no-acpi -no-hpet
+
+run-simple: lightos.iso
+	qemu-system-i386 -cdrom lightos.iso -m 256M
+
+debug: lightos.iso
+	qemu-system-i386 -cdrom lightos.iso -nographic -m 256M -s -S
+
 clean:
-	rm -f *.bin *.o *.elf
+	rm -f *.bin *.o *.iso
+	rm -rf isodir
+
+# Show object file info for debugging
+info: $(OBJECTS)
+	@echo "=== Object file information ==="
+	file $(OBJECTS)
+	@echo "=== Sections in boot.o ==="
+	objdump -h boot.o
+	@echo "=== Sections in kernel.o ==="
+	objdump -h kernel.o
+
+.PHONY: all run debug clean info
