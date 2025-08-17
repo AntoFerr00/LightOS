@@ -87,10 +87,16 @@ Screen Output: The kernel writes directly to the VGA text mode memory buffer at 
 Keyboard Input: The system uses polling (inb/outb) to read scancodes directly from the PS/2 keyboard controller ports (0x60 and 0x64). Interrupts are not used.
 
 Project Structure
-.
-├── boot.asm          # Assembly code for CPU setup and kernel entry
-├── grub.cfg          # GRUB configuration file
-├── kernel.c          # The main C kernel, shell, and commands
-├── linker.ld         # Linker script to define memory layout
+lightos/
+├── boot.asm          # Assembly entry point and Multiboot header
+├── grub.cfg          # GRUB bootloader configuration
+├── kernel.c          # Main C kernel, shell, and command logic
+├── linker.ld         # Linker script for memory layout
 ├── Makefile          # Build automation script
-└── README.md         # This file
+└── README.md         # Project documentation
+
+# Generated after running 'make':
+├── boot.o            # Assembled boot object file
+├── kernel.o          # Compiled kernel object file
+├── kernel.bin        # Linked kernel binary
+└── lightos.iso       # Final bootable ISO image
