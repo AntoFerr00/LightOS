@@ -1,0 +1,7 @@
+# Ignore build artifacts
+*.o
+*.bin
+*.elf
+
+# Ignore special Windows files
+nul
